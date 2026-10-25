@@ -1,12 +1,11 @@
 package com.navan.inventory.invoice;
 
 import com.navan.inventory.common.Ids;
-import com.navan.inventory.common.InvoiceMembership;
 import com.navan.inventory.common.ListEnvelope;
 import com.navan.inventory.common.Pagination;
-import com.navan.inventory.common.TransactionQuery;
 import com.navan.inventory.common.TransactionSnapshot;
 import com.navan.inventory.common.error.ApiException;
+import com.navan.inventory.transaction.TransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,14 +15,14 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-public class InvoiceService implements InvoiceMembership {
+public class InvoiceService {
 
     private final InvoiceJdbcRepository repository;
-    private final TransactionQuery transactionQuery;
+    private final TransactionService transactionService;
 
-    public InvoiceService(InvoiceJdbcRepository repository, TransactionQuery transactionQuery) {
+    public InvoiceService(InvoiceJdbcRepository repository, TransactionService transactionService) {
         this.repository = repository;
-        this.transactionQuery = transactionQuery;
+        this.transactionService = transactionService;
     }
 
     @Transactional
@@ -100,13 +99,8 @@ public class InvoiceService implements InvoiceMembership {
         repository.delete(invoiceId);
     }
 
-    @Override
-    public boolean isInvoiced(String transactionId) {
-        return repository.isInvoiced(transactionId);
-    }
-
     private List<TransactionSnapshot> loadSnapshotsInInputOrder(List<String> ids) {
-        return transactionQuery.lockSnapshots(ids);
+        return transactionService.lockSnapshots(ids);
     }
 
     private void rebuildInvoice(String invoiceId, List<String> ids) {

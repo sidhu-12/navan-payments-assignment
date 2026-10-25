@@ -86,13 +86,6 @@ class InvoiceJdbcRepository {
         jdbcTemplate.update("DELETE FROM invoices WHERE id = ?", invoiceId);
     }
 
-    boolean isInvoiced(String transactionId) {
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM invoice_lines WHERE transaction_id = ?", Integer.class, transactionId
-        );
-        return count != null && count > 0;
-    }
-
     private void insertLines(String invoiceId, List<TransactionSnapshot> snapshots) {
         int position = 1;
         for (TransactionSnapshot snapshot : snapshots) {

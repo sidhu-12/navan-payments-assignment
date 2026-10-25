@@ -5,7 +5,6 @@ import com.navan.inventory.common.Ids;
 import com.navan.inventory.common.ListEnvelope;
 import com.navan.inventory.common.NavanFeeKind;
 import com.navan.inventory.common.Pagination;
-import com.navan.inventory.common.TransactionQuery;
 import com.navan.inventory.common.TransactionSnapshot;
 import com.navan.inventory.common.error.ApiException;
 import org.springframework.dao.DuplicateKeyException;
@@ -17,7 +16,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 @Service
-public class TransactionService implements TransactionQuery {
+public class TransactionService {
 
     private final TransactionJdbcRepository repository;
 
@@ -87,24 +86,6 @@ public class TransactionService implements TransactionQuery {
         repository.delete(id);
     }
 
-    @Override
-    public Optional<TransactionSnapshot> findSnapshot(String id) {
-        return repository.findSnapshot(id);
-    }
-
-    @Override
-    public List<TransactionSnapshot> findSnapshots(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return List.of();
-        }
-        java.util.ArrayList<TransactionSnapshot> snapshots = new java.util.ArrayList<>();
-        for (String id : ids) {
-            findSnapshot(id).ifPresent(snapshots::add);
-        }
-        return snapshots;
-    }
-
-    @Override
     public List<TransactionSnapshot> lockSnapshots(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
