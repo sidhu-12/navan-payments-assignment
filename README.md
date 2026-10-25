@@ -7,8 +7,17 @@ Spring Boot API for persisted travel transactions and immutable invoice snapshot
 Requires Java 21 or newer. The API uses file-backed H2 at `./data/navan`.
 
 ```sh
-./mvnw spring-boot:run
+./run.sh
 ```
+
+After startup, run these directly in another terminal to create a transaction and confirm it appears in the paginated list:
+
+```sh
+curl -i -X POST http://localhost:8080/transactions -H 'Content-Type: application/json' -d '{"type":"navan_fee","external_id":"terminal-smoke-001","currency":"EUR","occurred_at":"2026-03-11T18:00:00Z","total":15.00,"tax_lines":[],"fee_lines":[],"metadata":{"fee_kind":"agent_call_fee","description":"Terminal smoke test"}}'
+curl -sS 'http://localhost:8080/transactions?limit=5&offset=0'
+```
+
+The POST returns the stored transaction and its generated ID; the GET response includes the new item.
 
 Run the required integration tests with one command:
 
