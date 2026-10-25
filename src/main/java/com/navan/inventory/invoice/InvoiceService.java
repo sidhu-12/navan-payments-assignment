@@ -20,11 +20,19 @@ public class InvoiceService {
     private final InvoiceJdbcRepository repository;
     private final TransactionService transactionService;
 
+    /** Creates an invoice service using persisted transaction snapshots. */
     public InvoiceService(InvoiceJdbcRepository repository, TransactionService transactionService) {
         this.repository = repository;
         this.transactionService = transactionService;
     }
 
+    /**
+     * Creates an invoice from the current transaction records and persists copied line snapshots.
+     *
+     * @param request one transaction ID or an ordered list of transaction IDs
+     * @return the newly persisted invoice with its lines and rollups
+     * @throws ApiException if IDs are missing or duplicated, or if their currencies differ
+     */
     @Transactional
     public InvoiceResponse create(InvoiceRequest request) {
         if (request == null) {
@@ -56,6 +64,14 @@ public class InvoiceService {
         return getById(invoiceId);
     }
 
+    /**
+     * Returns one bounded page of invoices.
+     *
+     * @param limit requested page size, defaulting to the configured default
+     * @param offset number of records to skip
+     * @return page contents and pagination metadata
+     * @throws ApiException if the pagination values are outside allowed bounds
+     */
     public ListEnvelope<InvoiceResponse> list(Integer limit, Integer offset) {
         Pagination pagination = Pagination.from(limit, offset);
         long total = repository.count();
@@ -63,6 +79,13 @@ public class InvoiceService {
         return new ListEnvelope<>(items, pagination.limit(), pagination.offset(), total);
     }
 
+    /**
+     * Retrieves an invoice and its persisted snapshot lines by ID.
+     *
+     * @param invoiceId invoice ID
+     * @return the invoice header, snapshot lines, rollups, and totals
+     * @throws ApiException if the ID is blank or no invoice exists
+     */
     public InvoiceResponse getById(String invoiceId) {
         if (invoiceId == null || invoiceId.isBlank()) {
             throw ApiException.badRequest("invoice id is required");
@@ -74,6 +97,14 @@ public class InvoiceService {
         return invoice;
     }
 
+    /**
+     * Atomically replaces an invoice's transaction selection and rebuilds its snapshots from current records.
+     *
+     * @param invoiceId invoice ID
+     * @param request replacement transaction selection
+     * @return the rebuilt invoice
+     * @throws ApiException if the invoice or a transaction is missing, IDs are duplicated, or currencies differ
+     */
     @Transactional
     public InvoiceResponse patch(String invoiceId, InvoiceRequest request) {
         if (request == null) {
@@ -92,6 +123,12 @@ public class InvoiceService {
         return getById(invoiceId);
     }
 
+    /**
+     * Deletes an invoice and its copied lines without deleting the underlying transactions.
+     *
+     * @param invoiceId invoice ID
+     * @throws ApiException if the invoice does not exist
+     */
     @Transactional
     public void deleteInvoice(String invoiceId) {
         repository.lockById(invoiceId);

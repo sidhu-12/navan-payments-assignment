@@ -20,10 +20,18 @@ public class TransactionService {
 
     private final TransactionJdbcRepository repository;
 
+    /** Creates a transaction service backed by the JDBC repository. */
     public TransactionService(TransactionJdbcRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * Validates and atomically stores a transaction and its child records.
+     *
+     * @param request transaction fields and type-specific metadata
+     * @return the persisted transaction
+     * @throws ApiException if the request is invalid or its external ID already exists
+     */
     @Transactional
     public TransactionResponse create(TransactionRequest request) {
         validateRequest(request);
@@ -42,6 +50,14 @@ public class TransactionService {
         }
     }
 
+    /**
+     * Returns one bounded page of transactions.
+     *
+     * @param limit requested page size, defaulting to the configured default
+     * @param offset number of records to skip
+     * @return page contents and pagination metadata
+     * @throws ApiException if the pagination values are outside allowed bounds
+     */
     public ListEnvelope<TransactionResponse> list(Integer limit, Integer offset) {
         Pagination pagination = Pagination.from(limit, offset);
         long total = repository.count();
@@ -49,6 +65,13 @@ public class TransactionService {
         return new ListEnvelope<>(items, pagination.limit(), pagination.offset(), total);
     }
 
+    /**
+     * Retrieves one transaction by its server-generated ID.
+     *
+     * @param id transaction ID
+     * @return the stored transaction including taxes, fees, and metadata
+     * @throws ApiException if the ID is blank or no transaction exists
+     */
     public TransactionResponse getById(String id) {
         if (id == null || id.isBlank()) {
             throw ApiException.badRequest("transaction id is required");
@@ -60,6 +83,14 @@ public class TransactionService {
         return transaction.get();
     }
 
+    /**
+     * Replaces an unbilled transaction and its child records atomically.
+     *
+     * @param id transaction ID
+     * @param request replacement transaction fields
+     * @return the updated transaction
+     * @throws ApiException if the transaction is missing, the request is invalid, or the transaction is already invoiced
+     */
     @Transactional
     public TransactionResponse update(String id, TransactionRequest request) {
         validateRequest(request);
@@ -76,6 +107,12 @@ public class TransactionService {
         return getById(id);
     }
 
+    /**
+     * Deletes an unbilled transaction; its dependent live child rows are removed by database cascades.
+     *
+     * @param id transaction ID
+     * @throws ApiException if the transaction is missing or already invoiced
+     */
     @Transactional
     public void delete(String id) {
         repository.lockById(id);
@@ -86,6 +123,14 @@ public class TransactionService {
         repository.delete(id);
     }
 
+    /**
+     * Locks the requested transaction rows and returns their current snapshots in input order.
+     * Missing IDs are omitted. The caller must have an active transaction so the locks remain held
+     * while it creates or rebuilds an invoice.
+     *
+     * @param ids transaction IDs to lock and snapshot
+     * @return snapshots for the IDs that currently exist
+     */
     public List<TransactionSnapshot> lockSnapshots(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
